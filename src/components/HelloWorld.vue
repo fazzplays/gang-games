@@ -1,7 +1,7 @@
 <template>
   <div class="wordle-container">
     <!-- Word selection screen -->
-    <div v-if="!gameStarted" class="word-selection">
+    <div v-if="!targetWord" class="word-selection">
       <h2>Generate Your Wordle Link</h2>
       <input
         v-model="customWordInput"
@@ -17,11 +17,12 @@
     </div>
 
     <!-- Display generated link and start game when accessing link -->
-    <div v-else class="link-display">
+    <div v-else-if="targetWord && !playing" class="link-display">
       <h2>Share This Link</h2>
       <input class="link-input" :value="shareableLink" readonly @focus="selectLink" />
       <p>Anyone with this link can play your custom Wordle.</p>
     </div>
+
 
     <!-- Game board screen -->
     <div v-if="gameStarted && playing" class="game-board">
@@ -57,8 +58,9 @@
       </div>
       <div v-if="gameOver" class="game-result">
         <p v-if="win">Congratulations! You guessed the word correctly.</p>
-        <!-- <p v-else>Game Over. The word was: <strong>{{ targetWord }}</strong></p> -->
-        <button @click="resetGame">Play Again</button>
+        <p v-else>Game Over.</p>
+        <button @click="resetCurrentGame">Play Again</button>
+        <button @click="resetGame">Create New Game</button>
       </div>
     </div>
   </div>
@@ -73,6 +75,7 @@ export default {
       targetWord: '',         // The secret word to guess (from URL param)
       gameStarted: false,     // True after generating or reading link
       playing: false,         // True only when playing the game (not when just showing link)
+      gameCreated: false,     // True after generating link
       wordLength: 5,
       maxGuesses: 6,
       currentGuess: '',
@@ -118,7 +121,7 @@ export default {
       const base = window.location.origin + window.location.pathname;
       this.shareableLink = `${base}?word=${encoded}`;
       this.targetWord = word;
-      this.gameStarted = true;
+      this.gameCreated = true;
       this.playing = false;
     },
     selectLink(event) {
@@ -178,6 +181,14 @@ export default {
       // Remove URL param
       window.history.replaceState({}, document.title, window.location.pathname);
     },
+    resetCurrentGame() {
+      this.currentGuess = '';
+      this.guesses = Array(this.maxGuesses).fill('');
+      this.feedbacks = Array(this.maxGuesses).fill(null);
+      this.attemptIndex = 0;
+      this.gameOver = false;
+      this.win = false;
+    }
   },
 };
 </script>
