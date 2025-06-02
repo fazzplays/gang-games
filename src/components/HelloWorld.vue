@@ -57,7 +57,7 @@
       </div>
       <div v-if="gameOver" class="game-result">
         <p v-if="win">Congratulations! You guessed the word correctly.</p>
-        <p v-else>Game Over. The word was: <strong>{{ targetWord }}</strong></p>
+        <!-- <p v-else>Game Over. The word was: <strong>{{ targetWord }}</strong></p> -->
         <button @click="resetGame">Play Again</button>
       </div>
     </div>
