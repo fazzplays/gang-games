@@ -27,6 +27,7 @@
     <!-- Game board screen -->
     <div v-if="gameStarted && playing" class="game-board">
       <h2>Wordle Game</h2>
+      <div>Today's word: {{ targetWord }}</div>
       <div class="grid">
         <div
           v-for="(row, rowIndex) in maxGuesses"
@@ -67,63 +68,94 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue'
+import { dailyWords } from '../dailyWords.js'
 
-// Constants
-const wordLength = 5
-const maxGuesses = 6
+// 1) YOUR LIST OF 5-LETTER WORDS
+//    (In a real app you’d probably import this from a separate file or fetch it.)
+//    For brevity, here’s a tiny dummy list—replace with your full wordlist.
 
-// Reactive state
-const customWordInput = ref('')      // Input for setting the secret word
-const targetWord = ref('')           // The secret word to guess (from URL param)
-const gameStarted = ref(false)       // True after generating or reading link
-const playing = ref(false)           // True only when playing the game (not when just showing link)
-const gameCreated = ref(false)       // True after generating link
 
-const currentGuess = ref('')
-const guesses = ref(Array(maxGuesses).fill(''))
-const feedbacks = ref(Array(maxGuesses).fill(null))
-const attemptIndex = ref(0)
-const gameOver = ref(false)
-const win = ref(false)
+const wordLength  = 5
+const maxGuesses  = 6
 
+// 2) REACTIVE STATE
+const customWordInput = ref('')
+const targetWord      = ref('')
+const gameStarted     = ref(false)
+const playing         = ref(false)
+const gameCreated     = ref(false)
+
+const currentGuess  = ref('')
+const guesses       = ref(Array(maxGuesses).fill(''))
+const feedbacks     = ref(Array(maxGuesses).fill(null))
+const attemptIndex  = ref(0)
+const gameOver      = ref(false)
+const win           = ref(false)
 const shareableLink = ref('')
 
-// Computed properties
+// 3) COMPUTED VALIDATORS
 const isValidCustomWord = computed(() => {
   return /^[A-Za-z]{5}$/.test(customWordInput.value)
 })
-
 const isValidGuess = computed(() => {
-  return /^[A-Za-z]{5}$/.test(currentGuess.value) && attemptIndex.value < maxGuesses
+  return /^[A-Za-z]{5}$/.test(currentGuess.value) &&
+         attemptIndex.value < maxGuesses
 })
 
-// Lifecycle hook: onMounted
+// 4) HELPER TO GET “WORD OF THE DAY”
+function getDailyWord() {
+  const msPerDay = 1000 * 60 * 60 * 24
+
+  // 1. Grab “today” in local time
+  const today = new Date()
+
+  // 2. Construct a Date object at local midnight (year, month, day) → this is automatically in AEST/AEDT
+  const localMidnight = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  )
+
+  // 3. Compute “whole days since Unix epoch” based on that local‐midnight timestamp
+  const daysSinceEpochLocal = Math.floor(localMidnight.getTime() / msPerDay)
+
+  // 4. Map into [0 … dailyWords.length−1]
+  const idx = daysSinceEpochLocal % dailyWords.length
+  return dailyWords[idx]
+}
+
+
+// 5) ON MOUNT: EITHER USE ?word=… OR SET TODAY’S WORD
 onMounted(() => {
   const params = new URLSearchParams(window.location.search)
   if (params.has('word')) {
     const encoded = params.get('word')
     try {
       const decoded = atob(encoded)
+      // only accept strictly lowercase a–z, length 5
       if (/^[a-z]{5}$/.test(decoded)) {
         targetWord.value = decoded
         gameStarted.value = true
         playing.value = true
+        return
       }
     } catch (e) {
-      // invalid base64 or word—ignore
+      // invalid base64 → fall through to dailyWord logic
     }
   }
+
+  // No valid URL param → automatically pick today’s word
+  targetWord.value = getDailyWord()
+  gameStarted.value = true
+  playing.value = true
 })
 
-// Methods
-
+// 6) METHODS (unchanged aside from removing the old “mounted only sets if URL” logic)
 function generateLink() {
   if (!isValidCustomWord.value) return
-
   const word = customWordInput.value.trim().toLowerCase()
   const encoded = btoa(word)
-  // Construct a shareable link keeping existing path
   const base = window.location.origin + window.location.pathname
   shareableLink.value = `${base}?word=${encoded}`
 
@@ -155,25 +187,23 @@ function submitGuess() {
   if (attemptIndex.value >= maxGuesses) {
     gameOver.value = true
   }
-
   currentGuess.value = ''
 }
 
 function getFeedback(guess) {
   const feedback = Array(wordLength).fill('absent')
   const targetArr = targetWord.value.split('')
-  const guessArr = guess.split('')
+  const guessArr  = guess.split('')
 
-  // First pass: correct positions
+  // 1st pass: correct
   for (let i = 0; i < wordLength; i++) {
     if (guessArr[i] === targetArr[i]) {
       feedback[i] = 'correct'
       targetArr[i] = null
-      guessArr[i] = null
+      guessArr[i]  = null
     }
   }
-
-  // Second pass: present but wrong position
+  // 2nd pass: present
   for (let i = 0; i < wordLength; i++) {
     if (guessArr[i]) {
       const idx = targetArr.indexOf(guessArr[i])
@@ -183,36 +213,36 @@ function getFeedback(guess) {
       }
     }
   }
-
   return feedback
 }
 
 function resetGame() {
   customWordInput.value = ''
-  targetWord.value = ''
-  gameStarted.value = false
-  playing.value = false
-  currentGuess.value = ''
-  guesses.value = Array(maxGuesses).fill('')
-  feedbacks.value = Array(maxGuesses).fill(null)
-  attemptIndex.value = 0
-  gameOver.value = false
-  win.value = false
-  shareableLink.value = ''
+  targetWord.value      = ''
+  gameStarted.value     = false
+  playing.value         = false
+  currentGuess.value    = ''
+  guesses.value         = Array(maxGuesses).fill('')
+  feedbacks.value       = Array(maxGuesses).fill(null)
+  attemptIndex.value    = 0
+  gameOver.value        = false
+  win.value             = false
+  shareableLink.value   = ''
 
-  // Remove URL param
+  // Remove any ?word=… from URL
   window.history.replaceState({}, document.title, window.location.pathname)
 }
 
 function resetCurrentGame() {
   currentGuess.value = ''
-  guesses.value = Array(maxGuesses).fill('')
-  feedbacks.value = Array(maxGuesses).fill(null)
+  guesses.value      = Array(maxGuesses).fill('')
+  feedbacks.value    = Array(maxGuesses).fill(null)
   attemptIndex.value = 0
-  gameOver.value = false
-  win.value = false
+  gameOver.value     = false
+  win.value          = false
 }
 </script>
+
 
 
 <style scoped>
