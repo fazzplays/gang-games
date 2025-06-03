@@ -27,6 +27,7 @@
     <!-- Game board screen -->
     <div v-if="gameStarted && playing" class="game-board">
       <h2>Wordle Game</h2>
+      <!-- <div>Today's word: {{ targetWord }}</div> -->
       <div class="grid">
         <div
           v-for="(row, rowIndex) in maxGuesses"
@@ -59,7 +60,7 @@
       <div v-if="gameOver" class="game-result">
         <p v-if="win">Congratulations! You guessed the word correctly.</p>
         <p v-else>Game Over.</p>
-        <button @click="resetCurrentGame">Play Again</button>
+        <button style="margin-right: 10px" @click="resetCurrentGame">Play Again</button>
         <button @click="resetGame">Create New Game</button>
       </div>
     </div>
