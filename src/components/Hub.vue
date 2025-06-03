@@ -27,7 +27,6 @@
     <!-- Game board screen -->
     <div v-if="gameStarted && playing" class="game-board">
       <h2>Wordle Game</h2>
-      <div>Today's word: {{ targetWord }}</div>
       <div class="grid">
         <div
           v-for="(row, rowIndex) in maxGuesses"
