@@ -1,9 +1,9 @@
 <script setup>
-import HelloWorld from './components/HelloWorld.vue'
+import Hub from './components/Hub.vue'
 </script>
 
 <template>
-  <HelloWorld/>
+  <Hub />
 </template>
 
 <style scoped>

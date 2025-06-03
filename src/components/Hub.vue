@@ -66,132 +66,154 @@
   </div>
 </template>
 
-<script>
-export default {
-  name: 'WordleGameWithLink',
-  data() {
-    return {
-      customWordInput: '',    // Input for setting the secret word
-      targetWord: '',         // The secret word to guess (from URL param)
-      gameStarted: false,     // True after generating or reading link
-      playing: false,         // True only when playing the game (not when just showing link)
-      gameCreated: false,     // True after generating link
-      wordLength: 5,
-      maxGuesses: 6,
-      currentGuess: '',
-      guesses: Array(6).fill(''),
-      feedbacks: Array(6).fill(null),
-      attemptIndex: 0,
-      gameOver: false,
-      win: false,
-      shareableLink: '',      // Link with encoded word
-    };
-  },
-  computed: {
-    isValidCustomWord() {
-      return /^[A-Za-z]{5}$/.test(this.customWordInput);
-    },
-    isValidGuess() {
-      return /^[A-Za-z]{5}$/.test(this.currentGuess) && this.attemptIndex < this.maxGuesses;
-    },
-  },
-  mounted() {
-    // On load, check for "word" param in URL
-    const params = new URLSearchParams(window.location.search);
-    if (params.has('word')) {
-      const encoded = params.get('word');
-      try {
-        const decoded = atob(encoded);
-        if (/^[a-z]{5}$/.test(decoded)) {
-          this.targetWord = decoded;
-          this.gameStarted = true;
-          this.playing = true;
-        }
-      } catch (e) {
-        // Invalid base64 or word—ignore
+<script setup>
+import { ref, computed, onMounted } from 'vue';
+
+// Constants
+const wordLength = 5
+const maxGuesses = 6
+
+// Reactive state
+const customWordInput = ref('')      // Input for setting the secret word
+const targetWord = ref('')           // The secret word to guess (from URL param)
+const gameStarted = ref(false)       // True after generating or reading link
+const playing = ref(false)           // True only when playing the game (not when just showing link)
+const gameCreated = ref(false)       // True after generating link
+
+const currentGuess = ref('')
+const guesses = ref(Array(maxGuesses).fill(''))
+const feedbacks = ref(Array(maxGuesses).fill(null))
+const attemptIndex = ref(0)
+const gameOver = ref(false)
+const win = ref(false)
+
+const shareableLink = ref('')
+
+// Computed properties
+const isValidCustomWord = computed(() => {
+  return /^[A-Za-z]{5}$/.test(customWordInput.value)
+})
+
+const isValidGuess = computed(() => {
+  return /^[A-Za-z]{5}$/.test(currentGuess.value) && attemptIndex.value < maxGuesses
+})
+
+// Lifecycle hook: onMounted
+onMounted(() => {
+  const params = new URLSearchParams(window.location.search)
+  if (params.has('word')) {
+    const encoded = params.get('word')
+    try {
+      const decoded = atob(encoded)
+      if (/^[a-z]{5}$/.test(decoded)) {
+        targetWord.value = decoded
+        gameStarted.value = true
+        playing.value = true
+      }
+    } catch (e) {
+      // invalid base64 or word—ignore
+    }
+  }
+})
+
+// Methods
+
+function generateLink() {
+  if (!isValidCustomWord.value) return
+
+  const word = customWordInput.value.trim().toLowerCase()
+  const encoded = btoa(word)
+  // Construct a shareable link keeping existing path
+  const base = window.location.origin + window.location.pathname
+  shareableLink.value = `${base}?word=${encoded}`
+
+  targetWord.value = word
+  gameCreated.value = true
+  playing.value = false
+}
+
+function selectLink(event) {
+  event.target.select()
+}
+
+function submitGuess() {
+  if (!isValidGuess.value) return
+
+  const guess = currentGuess.value.trim().toLowerCase()
+  guesses.value[attemptIndex.value] = guess
+
+  const feedback = getFeedback(guess)
+  feedbacks.value[attemptIndex.value] = feedback
+
+  if (guess === targetWord.value) {
+    win.value = true
+    gameOver.value = true
+    return
+  }
+
+  attemptIndex.value++
+  if (attemptIndex.value >= maxGuesses) {
+    gameOver.value = true
+  }
+
+  currentGuess.value = ''
+}
+
+function getFeedback(guess) {
+  const feedback = Array(wordLength).fill('absent')
+  const targetArr = targetWord.value.split('')
+  const guessArr = guess.split('')
+
+  // First pass: correct positions
+  for (let i = 0; i < wordLength; i++) {
+    if (guessArr[i] === targetArr[i]) {
+      feedback[i] = 'correct'
+      targetArr[i] = null
+      guessArr[i] = null
+    }
+  }
+
+  // Second pass: present but wrong position
+  for (let i = 0; i < wordLength; i++) {
+    if (guessArr[i]) {
+      const idx = targetArr.indexOf(guessArr[i])
+      if (idx !== -1) {
+        feedback[i] = 'present'
+        targetArr[idx] = null
       }
     }
-  },
-  methods: {
-    generateLink() {
-      if (!this.isValidCustomWord) return;
-      const word = this.customWordInput.trim().toLowerCase();
-      const encoded = btoa(word);
-      // Construct a shareable link keeping existing path
-      const base = window.location.origin + window.location.pathname;
-      this.shareableLink = `${base}?word=${encoded}`;
-      this.targetWord = word;
-      this.gameCreated = true;
-      this.playing = false;
-    },
-    selectLink(event) {
-      event.target.select();
-    },
-    submitGuess() {
-      if (!this.isValidGuess) return;
-      const guess = this.currentGuess.trim().toLowerCase();
-      this.guesses[this.attemptIndex] = guess;
-      const feedback = this.getFeedback(guess);
-      this.feedbacks[this.attemptIndex] = feedback;
-      if (guess === this.targetWord) {
-        this.win = true;
-        this.gameOver = true;
-        return;
-      }
-      this.attemptIndex++;
-      if (this.attemptIndex >= this.maxGuesses) {
-        this.gameOver = true;
-      }
-      this.currentGuess = '';
-    },
-    getFeedback(guess) {
-      const feedback = Array(this.wordLength).fill('absent');
-      const targetArr = this.targetWord.split('');
-      const guessArr = guess.split('');
-      for (let i = 0; i < this.wordLength; i++) {
-        if (guessArr[i] === targetArr[i]) {
-          feedback[i] = 'correct';
-          targetArr[i] = null;
-          guessArr[i] = null;
-        }
-      }
-      for (let i = 0; i < this.wordLength; i++) {
-        if (guessArr[i]) {
-          const idx = targetArr.indexOf(guessArr[i]);
-          if (idx !== -1) {
-            feedback[i] = 'present';
-            targetArr[idx] = null;
-          }
-        }
-      }
-      return feedback;
-    },
-    resetGame() {
-      this.customWordInput = '';
-      this.targetWord = '';
-      this.gameStarted = false;
-      this.playing = false;
-      this.currentGuess = '';
-      this.guesses = Array(this.maxGuesses).fill('');
-      this.feedbacks = Array(this.maxGuesses).fill(null);
-      this.attemptIndex = 0;
-      this.gameOver = false;
-      this.win = false;
-      this.shareableLink = '';
-      // Remove URL param
-      window.history.replaceState({}, document.title, window.location.pathname);
-    },
-    resetCurrentGame() {
-      this.currentGuess = '';
-      this.guesses = Array(this.maxGuesses).fill('');
-      this.feedbacks = Array(this.maxGuesses).fill(null);
-      this.attemptIndex = 0;
-      this.gameOver = false;
-      this.win = false;
-    }
-  },
-};
+  }
+
+  return feedback
+}
+
+function resetGame() {
+  customWordInput.value = ''
+  targetWord.value = ''
+  gameStarted.value = false
+  playing.value = false
+  currentGuess.value = ''
+  guesses.value = Array(maxGuesses).fill('')
+  feedbacks.value = Array(maxGuesses).fill(null)
+  attemptIndex.value = 0
+  gameOver.value = false
+  win.value = false
+  shareableLink.value = ''
+
+  // Remove URL param
+  window.history.replaceState({}, document.title, window.location.pathname)
+}
+
+function resetCurrentGame() {
+  currentGuess.value = ''
+  guesses.value = Array(maxGuesses).fill('')
+  feedbacks.value = Array(maxGuesses).fill(null)
+  attemptIndex.value = 0
+  gameOver.value = false
+  win.value = false
+}
 </script>
+
 
 <style scoped>
 .wordle-container {
@@ -203,7 +225,7 @@ export default {
 .word-selection input {
   padding: 8px;
   font-size: 1rem;
-  width: 200px;
+  width: 250px;
   text-transform: uppercase;
   letter-spacing: 2px;
   text-align: center;
