@@ -28,6 +28,7 @@
     <div v-if="gameStarted && playing" class="game-board">
       <h2>Wordle Game</h2>
       <!-- <div>Today's word: {{ targetWord }}</div> -->
+      <div style="margin-bottom: 10px">Today's date: {{ str }}</div>
       <div class="grid">
         <div
           v-for="(row, rowIndex) in maxGuesses"
@@ -78,6 +79,13 @@ import { dailyWords } from '../dailyWords.js'
 
 const wordLength  = 5
 const maxGuesses  = 6
+
+// 1. Create a new Date instance (defaults to “now”)
+const now = new Date();
+const str = new Intl.DateTimeFormat("en-AU", {
+  timeZone: "Australia/Sydney",
+  timeZoneName: "short"
+}).format(now);
 
 // 2) REACTIVE STATE
 const customWordInput = ref('')
@@ -248,6 +256,7 @@ function resetCurrentGame() {
 <style scoped>
 .wordle-container {
   max-width: 400px;
+  height: 600px;
   margin: 0 auto;
   text-align: center;
   font-family: Arial, sans-serif;
