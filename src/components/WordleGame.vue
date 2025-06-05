@@ -62,8 +62,8 @@
       <div v-if="gameOver" class="game-result">
         <p v-if="win">Congratulations! You guessed the word correctly.</p>
         <p v-else>Game Over.</p>
-        <button style="margin-right: 10px" @click="resetCurrentGame" class="guess-input">Play Again</button>
-        <button @click="resetGame">Create New Game</button>
+        <v-btn style="margin-right: 10px; background-color: grey;" @click="resetCurrentGame" class="guess-input">Play Again</v-btn>
+        <v-btn style="background-color: grey;"@click="resetGame">Create New Game</v-btn>
       </div>
     </div>
   </div>
