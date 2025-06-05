@@ -1,22 +1,21 @@
 <script setup>
-import Hub from './components/Hub.vue'
+
 </script>
 
 <template>
-  <Hub />
+  <div class="hub-games">
+    <router-view />
+  </div>
 </template>
 
+
 <style scoped>
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
+.hub-games {
+  max-width: 600px;
+  margin: 50px auto;
+  text-align: center;
+  font-family: Arial, sans-serif;
 }
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
-}
+
+
 </style>
