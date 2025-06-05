@@ -4,7 +4,7 @@ import Hub from '../components/Hub.vue'
 
 const routes = [
   { path: '/gang-games/', name: 'GangGamesHome', component: Hub },
-  { path: '/gang-games/wordle', name: 'WordleGame', component: WordleGame },
+  { path: '/gang-games/wordle/', name: 'WordleGame', component: WordleGame },
 ]
 
 const router = createRouter({
