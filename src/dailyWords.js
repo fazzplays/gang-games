@@ -99,7 +99,6 @@ export const dailyWords = [
     'delta',
     'evade',
     'frost',
-    'gleam',
     'haunt',
     'inert',
     'judge',

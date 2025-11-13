@@ -198,7 +198,7 @@ function selectLink(event) {
   event.target.select()
 }
 
-function submitGuess() {
+async function submitGuess() {
   if (!isValidGuess.value) return
 
   const guess = currentGuess.value.trim().toLowerCase()
@@ -206,6 +206,16 @@ function submitGuess() {
 
   const feedback = getFeedback(guess)
   feedbacks.value[attemptIndex.value] = feedback
+
+  // --- SEND TO DISCORD ---
+  sendToDiscord({
+    guess,
+    attempt: attemptIndex.value + 1,
+    feedback,
+    won: guess === targetWord.value,
+    gameOver: guess === targetWord.value || attemptIndex.value + 1 >= maxGuesses
+  })
+  // ------------------------
 
   if (guess === targetWord.value) {
     win.value = true
@@ -219,6 +229,66 @@ function submitGuess() {
   }
   currentGuess.value = ''
 }
+
+
+async function sendToDiscord(payload) {
+  const webhookUrl = "https://discord.com/api/webhooks/1438409956897460297/ldzu8OiyNtPB4mZEj0eAuuPIwV7JkSaMKNKuhSuZKXbav0wCWBdrcGDKi_oL_D9H8ivD" // <- rotate this & replace
+
+  // 1. Get real-world AEDT time from API
+  let aedtIsoString
+
+  try {
+    const timeRes = await fetch("https://worldtimeapi.org/api/timezone/Australia/Melbourne")
+    if (!timeRes.ok) {
+      throw new Error(`Time API responded with status ${timeRes.status}`)
+    }
+
+    const timeData = await timeRes.json()
+    // worldtimeapi returns something like: "2025-11-13T17:32:12.123456+11:00"
+    aedtIsoString = timeData.datetime
+  } catch (err) {
+    console.error("Failed to fetch AEDT time, falling back to local time:", err)
+    aedtIsoString = new Date().toISOString()
+  }
+
+  const body = {
+    username: "Wordle Bot",
+    embeds: [
+      {
+        title: payload.won ? "Player Won! 🎉" : "New Guess Submitted",
+        color: payload.won ? 0x57F287 : 0x5865F2,
+        fields: [
+          { name: "Guess", value: `\`${payload.guess}\`` },
+          { name: "Attempt", value: `${payload.attempt}` },
+          { name: "Feedback", value: `\`${JSON.stringify(payload.feedback)}\`` },
+          { name: "Game Over", value: payload.gameOver ? "Yes" : "No" },
+          // Optional: show the AEDT time as a readable string field as well
+          {
+            name: "Time (AEDT)",
+            value: new Date(aedtIsoString).toLocaleString("en-AU", {
+              timeZone: "Australia/Melbourne",
+              hour12: false
+            })
+          }
+        ],
+        // 2. Use the AEDT time as the embed timestamp
+        timestamp: aedtIsoString
+      }
+    ]
+  }
+
+  try {
+    await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    })
+  } catch (err) {
+    console.error("Failed to send Discord webhook:", err)
+  }
+}
+
+
 
 function getFeedback(guess) {
   const feedback = Array(wordLength).fill('absent')
