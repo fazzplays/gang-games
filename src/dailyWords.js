@@ -782,7 +782,6 @@ export const dailyWords = [
     'frail',
     'glove',
     'homer',
-    'iota',
     'jumbo',
     'knelt',
     'lofty',
