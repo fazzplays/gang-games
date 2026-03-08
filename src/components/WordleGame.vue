@@ -138,21 +138,27 @@ const isValidGuess = computed(() => {
 function getDailyWord() {
   const msPerDay = 1000 * 60 * 60 * 24
 
-  // 1. Grab “today” in local time
-  const today = new Date()
+  // Get the current Melbourne date (AEST/AEDT aware)
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Australia/Melbourne",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date())
 
-  // 2. Construct a Date object at local midnight (year, month, day) → this is automatically in AEST/AEDT
-  const localMidnight = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate()
-  )
+  const year = Number(parts.find(p => p.type === "year").value)
+  const month = Number(parts.find(p => p.type === "month").value)
+  const day = Number(parts.find(p => p.type === "day").value)
 
-  // 3. Compute “whole days since Unix epoch” based on that local‐midnight timestamp
-  const daysSinceEpochLocal = Math.floor(localMidnight.getTime() / msPerDay)
+  // Create midnight Melbourne time
+  const melbourneMidnight = new Date(year, month - 1, day)
 
-  // 4. Map into [0 … dailyWords.length−1]
-  const idx = daysSinceEpochLocal % dailyWords.length
+  // Compute days since epoch
+  const daysSinceEpoch = Math.floor(melbourneMidnight.getTime() / msPerDay)
+
+  // Map to word list
+  const idx = ((daysSinceEpoch % dailyWords.length) + dailyWords.length) % dailyWords.length
+
   return dailyWords[idx]
 }
 
